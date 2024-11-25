@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -257,7 +258,17 @@ func (jwtPlugin *JwtPlugin) ParseKeys(certificates []string) error {
 	defer jwtPlugin.keysLock.Unlock()
 
 	for _, certificate := range certificates {
-		if block, rest := pem.Decode([]byte(certificate)); block != nil {
+		var data []byte
+		if file, err := os.Open(certificate); err == nil {
+			defer file.Close()
+			data, err = io.ReadAll(file)
+			if err != nil {
+				return fmt.Errorf("failed to read PEM file")
+			}
+		} else {
+			data = []byte(certificate)
+		}
+		if block, rest := pem.Decode(data); block != nil {
 			if len(rest) > 0 {
 				return fmt.Errorf("extra data after a PEM certificate block")
 			}
